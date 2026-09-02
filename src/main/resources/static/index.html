@@ -3,22 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="DeepSweep scans Git commit history for secrets that were ever committed.">
   <title>DeepSweep · Git history secret scanner</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <main>
-  <header>
-    <p>DarkPixelLabs security tools</p>
+  <header class="masthead">
+    <p class="eyebrow">DarkPixelLabs / security tool 03</p>
     <h1>DeepSweep</h1>
-    <p>Search a repository's commit history for secrets that were ever committed.</p>
+    <p class="lede">Search the commit history, not just the files you can see now. Deleted secrets can still be found here.</p>
   </header>
 
-  <form id="scan-form">
+  <form id="scan-form" class="scan-form">
     <label>Repository URL
       <input id="repo-url" type="url" placeholder="https://github.com/owner/repo" required>
     </label>
-    <label>Personal access token <span>(optional)</span>
+    <label>Personal access token <span>(optional, memory only)</span>
       <input id="token" type="password" autocomplete="off" placeholder="For private repositories">
     </label>
     <label>Max commits
@@ -27,19 +28,16 @@
     <button id="scan-button" type="submit">Start scan</button>
   </form>
 
+  <p class="safety-note">The token is sent only in the scan request and is never displayed or logged. DeepSweep clones into temporary disk space and removes the clone after each scan.</p>
+
   <section id="status" aria-live="polite" hidden></section>
   <section id="results" hidden>
     <div class="results-heading">
-      <h2>Findings</h2>
+      <div><p class="section-kicker">History report</p><h2>Findings</h2></div>
       <span id="summary"></span>
     </div>
     <div id="empty" hidden>No secrets found in the scanned history.</div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>File</th><th>Type</th><th>Confidence</th><th>First seen</th><th>Date</th><th>Author</th><th>HEAD</th></tr></thead>
-        <tbody id="findings"></tbody>
-      </table>
-    </div>
+    <ol id="findings" class="timeline" aria-label="Secret findings"></ol>
   </section>
 </main>
 <script src="/app.js"></script>
