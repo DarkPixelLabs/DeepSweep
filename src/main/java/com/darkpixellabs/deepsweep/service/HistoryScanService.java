@@ -35,7 +35,7 @@ public class HistoryScanService {
 
     public ScanResult scan(Path repositoryDir, String repoDisplay, int maxCommits) throws Exception {
         long started = System.currentTimeMillis();
-        Map<String, Finding> findings = new LinkedHashMap<>();
+        Map<String, TrackedFinding> findings = new LinkedHashMap<>();
 
         try (Repository repository = new RepositoryBuilder()
                 .setGitDir(repositoryDir.resolve(".git").toFile())
@@ -47,15 +47,17 @@ public class HistoryScanService {
             List<RevCommit> commits = collectCommits(walk, head, maxCommits);
             log.info("Scanning {} commits for {}", commits.size(), repoDisplay);
 
-            commits.sort(Comparator.comparingInt(RevCommit::getCommitTime));
+            // Walk selection is newest-first; reverse it so firstSeen is evaluated in history order.
+            commits.sort(Comparator.comparingInt(RevCommit::getCommitTime).thenComparing(RevCommit::getName));
             for (int index = 0; index < commits.size(); index++) {
                 RevCommit commit = commits.get(index);
                 scanCommit(repository, commit, findings);
                 log.info("Scanned commit {}/{}", index + 1, commits.size());
             }
 
-            return new ScanResult(repoDisplay, commits.size(), new ArrayList<>(findings.values()),
-                    System.currentTimeMillis() - started);
+            markHeadPresence(repository, head, findings);
+            List<Finding> result = findings.values().stream().map(TrackedFinding::toFinding).toList();
+            return new ScanResult(repoDisplay, commits.size(), result, System.currentTimeMillis() - started);
         }
     }
 
@@ -71,7 +73,7 @@ public class HistoryScanService {
         return commits;
     }
 
-    private void scanCommit(Repository repository, RevCommit commit, Map<String, Finding> findings) throws Exception {
+    private void scanCommit(Repository repository, RevCommit commit, Map<String, TrackedFinding> findings) throws Exception {
         RevCommit parent = commit.getParentCount() == 0 ? null : commit.getParent(0);
 
         try (DiffFormatter formatter = new DiffFormatter(DisabledOutputStream.INSTANCE)) {
@@ -107,14 +109,46 @@ public class HistoryScanService {
     }
 
     private void scanLines(List<String> lines, int begin, int end, RevCommit commit, String path,
-                           Map<String, Finding> findings) throws Exception {
+                           Map<String, TrackedFinding> findings) throws Exception {
         for (int i = begin; i < end; i++) {
             for (SecretPatterns.Detection detection : SecretPatterns.detect(lines.get(i))) {
-                String key = path + ":" + sha256(detection.value());
-                findings.putIfAbsent(key, new Finding(
+                String valueHash = sha256(detection.value());
+                String key = path + ":" + valueHash;
+                findings.putIfAbsent(key, new TrackedFinding(
                         detection.secretType(), detection.confidence(), path, commit.getName(),
                         Instant.ofEpochSecond(commit.getCommitTime()).toString(), authorName(commit),
-                        false, redact(detection.value())));
+                        detection.value()
+                ));
+            }
+        }
+    }
+
+    private void markHeadPresence(Repository repository, RevCommit head, Map<String, TrackedFinding> findings) throws Exception {
+        if (findings.isEmpty()) {
+            return;
+        }
+        try (TreeWalk treeWalk = new TreeWalk(repository)) {
+            treeWalk.addTree(head.getTree());
+            treeWalk.setRecursive(true);
+            while (treeWalk.next()) {
+                String path = treeWalk.getPathString();
+                if (!isTextPath(path)) {
+                    continue;
+                }
+                ObjectLoader loader = repository.open(treeWalk.getObjectId(0));
+                byte[] content = loader.getBytes();
+                if (looksBinary(content)) {
+                    continue;
+                }
+                for (String line : splitLines(content)) {
+                    for (SecretPatterns.Detection detection : SecretPatterns.detect(line)) {
+                        String key = path + ":" + sha256(detection.value());
+                        TrackedFinding tracked = findings.get(key);
+                        if (tracked != null) {
+                            tracked.stillInHead = true;
+                        }
+                    }
+                }
             }
         }
     }
@@ -149,9 +183,7 @@ public class HistoryScanService {
     }
 
     private static List<String> splitLines(byte[] content) {
-        return new String(content, StandardCharsets.UTF_8).split("\\R", -1).length == 0
-                ? List.of()
-                : List.of(new String(content, StandardCharsets.UTF_8).split("\\R", -1));
+        return List.of(new String(content, StandardCharsets.UTF_8).split("\\R", -1));
     }
 
     private static String sha256(String value) throws Exception {
@@ -192,5 +224,32 @@ public class HistoryScanService {
             }
         }
         return false;
+    }
+
+    private static final class TrackedFinding {
+        private final String secretType;
+        private final String confidence;
+        private final String filePath;
+        private final String firstSeenCommit;
+        private final String firstSeenDate;
+        private final String firstSeenAuthor;
+        private final String value;
+        private boolean stillInHead;
+
+        private TrackedFinding(String secretType, String confidence, String filePath, String firstSeenCommit,
+                               String firstSeenDate, String firstSeenAuthor, String value) {
+            this.secretType = secretType;
+            this.confidence = confidence;
+            this.filePath = filePath;
+            this.firstSeenCommit = firstSeenCommit;
+            this.firstSeenDate = firstSeenDate;
+            this.firstSeenAuthor = firstSeenAuthor;
+            this.value = value;
+        }
+
+        private Finding toFinding() {
+            return new Finding(secretType, confidence, filePath, firstSeenCommit, firstSeenDate,
+                    firstSeenAuthor, stillInHead, redact(value));
+        }
     }
 }
