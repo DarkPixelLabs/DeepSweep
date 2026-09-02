@@ -26,14 +26,12 @@ public class GitCloneService {
     public Path cloneRepository(String repoUrl, String token) throws Exception {
         Path target = Files.createTempDirectory(TEMP_PREFIX);
         try {
-            var command = Git.cloneRepository()
-                    .setURI(repoUrl)
-                    .setDirectory(target.toFile());
+            var command = Git.cloneRepository().setURI(repoUrl).setDirectory(target.toFile());
             if (token != null && !token.isBlank()) {
                 command.setCredentialsProvider(new UsernamePasswordCredentialsProvider("x-access-token", token));
             }
             try (Git ignored = command.call()) {
-                // Deliberately do not log the URL or credentials.
+                // Never log the URL, credentials, or clone output.
             }
             long gitBytes = directorySize(target.resolve(".git"));
             if (gitBytes > maxGitDirectoryBytes) {
@@ -72,7 +70,7 @@ public class GitCloneService {
         }
     }
 
-    static void deleteRecursively(Path path) throws IOException {
+    public static void deleteRecursively(Path path) throws IOException {
         if (path == null || !Files.exists(path)) {
             return;
         }
