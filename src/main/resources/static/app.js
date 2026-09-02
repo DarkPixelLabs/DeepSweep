@@ -40,16 +40,17 @@ function render(payload) {
   summary.textContent = `${payload.findings.length} finding(s) · ${payload.commitsScanned} commit(s)`;
   empty.hidden = payload.findings.length !== 0;
   for (const finding of payload.findings) {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${escapeHtml(finding.filePath)}<br><small>${escapeHtml(finding.redactedPreview)}</small></td>
-      <td>${escapeHtml(finding.secretType)}</td>
-      <td>${escapeHtml(finding.confidence)}</td>
-      <td><a target="_blank" rel="noreferrer" href="${commitUrl(payload.repo, finding.firstSeenCommit)}">${finding.firstSeenCommit.slice(0, 7)}</a></td>
-      <td>${escapeHtml(finding.firstSeenDate)}</td>
-      <td>${escapeHtml(finding.firstSeenAuthor)}</td>
-      <td><span class="badge ${finding.stillInHead ? 'yes' : 'no'}">${finding.stillInHead ? 'present' : 'removed'}</span></td>`;
-    findings.appendChild(row);
+    const item = document.createElement('li');
+    item.className = 'timeline-item';
+    item.innerHTML = `
+      <article class="finding">
+        <div class="finding-file"><span class="finding-label">File</span><strong>${escapeHtml(finding.filePath)}</strong><span class="preview">${escapeHtml(finding.redactedPreview)}</span></div>
+        <div class="finding-meta"><span class="finding-label">Secret type</span>${escapeHtml(finding.secretType)}</div>
+        <div class="finding-meta"><span class="finding-label">Confidence</span>${escapeHtml(finding.confidence)}</div>
+        <div class="finding-meta"><span class="finding-label">First seen</span><a target="_blank" rel="noreferrer" href="${commitUrl(payload.repo, finding.firstSeenCommit)}">${finding.firstSeenCommit.slice(0, 7)}</a><br>${escapeHtml(finding.firstSeenDate)}</div>
+        <div class="finding-meta"><span class="finding-label">HEAD</span><span class="badge ${finding.stillInHead ? 'yes' : 'no'}">${finding.stillInHead ? 'present' : 'removed'}</span></div>
+      </article>`;
+    findings.appendChild(item);
   }
 }
 
