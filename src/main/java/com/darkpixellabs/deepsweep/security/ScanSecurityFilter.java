@@ -68,8 +68,7 @@ public class ScanSecurityFilter extends OncePerRequestFilter {
         String client = request.getRemoteAddr();
         if (!allow(client)) {
             response.setHeader("Retry-After", Long.toString(Math.max(1, window.toSeconds())));
-            writeError(response, HttpServletResponse.SC_TOO_MANY_REQUESTS,
-                    "Scan rate limit exceeded; try again later");
+            writeError(response, 429, "Scan rate limit exceeded; try again later");
             return;
         }
 
