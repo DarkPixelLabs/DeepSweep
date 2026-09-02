@@ -23,14 +23,13 @@ class HistoryScanServiceTest {
         Files.createDirectories(repoDir);
         String fakeKey = "sk-abcd1234efgh5678ijklmnop";
         PersonIdent author = new PersonIdent("Fixture Author", "fixture@example.invalid",
-                java.util.Date.from(ZonedDateTime.now(ZoneOffset.UTC).toInstant()), ZoneOffset.UTC);
+                ZonedDateTime.now(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC);
 
         String firstCommit;
         try (Git git = Git.init().setDirectory(repoDir.toFile()).call()) {
             Files.writeString(repoDir.resolve("secret.txt"), "key=" + fakeKey + "\n");
-            firstCommit = git.add().addFilepattern("secret.txt").call() != null
-                    ? git.commit().setMessage("add fixture secret").setAuthor(author).setCommitter(author).call().getName()
-                    : null;
+            git.add().addFilepattern("secret.txt").call();
+            firstCommit = git.commit().setMessage("add fixture secret").setAuthor(author).setCommitter(author).call().getName();
 
             git.rm().addFilepattern("secret.txt").call();
             git.commit().setMessage("remove fixture secret").setAuthor(author).setCommitter(author).call();
