@@ -1,8 +1,8 @@
 package com.darkpixellabs.deepsweep.detection;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,7 +64,8 @@ public final class SecretPatterns {
         Matcher entropyMatcher = GENERIC_STRING.matcher(content);
         while (entropyMatcher.find()) {
             String value = entropyMatcher.group();
-            if (!knownSecretValues.contains(value) && shannonEntropy(value) > 4.0 && !looksLikeCommonText(value)) {
+            boolean overlapsNamedSecret = knownSecretValues.stream().anyMatch(secret -> secret.contains(value));
+            if (!overlapsNamedSecret && shannonEntropy(value) > 4.0 && !looksLikeCommonText(value)) {
                 add(unique, new Detection("High-entropy generic string", "low", value));
             }
         }
