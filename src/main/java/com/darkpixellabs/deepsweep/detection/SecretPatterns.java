@@ -20,7 +20,8 @@ public final class SecretPatterns {
             "-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----[\\s\\S]*?-----END (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----");
     private static final Pattern PASSWORD = Pattern.compile(
             "(?i)(?:^|[\\s,{])(?:pass|password)\\s*(?:=|:)\\s*([\\\"']?)([^\\s,;}\\\"']{4,})\\1");
-    private static final Pattern GENERIC_STRING = Pattern.compile("(?<![A-Za-z0-9])[A-Za-z0-9+/=_-]{24,}(?![A-Za-z0-9])");
+    private static final Pattern GENERIC_STRING = Pattern.compile(
+            "(?<![A-Za-z0-9])[A-Za-z0-9+/_-]{24,}={0,2}(?![A-Za-z0-9])");
 
     private SecretPatterns() {
     }
