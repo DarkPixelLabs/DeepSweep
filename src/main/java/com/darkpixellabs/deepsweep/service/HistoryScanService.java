@@ -6,10 +6,10 @@ import com.darkpixellabs.deepsweep.model.ScanResult;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
-import org.eclipse.jgit.diff.FileHeader;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryBuilder;
+import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
@@ -47,7 +47,6 @@ public class HistoryScanService {
             List<RevCommit> commits = collectCommits(walk, head, maxCommits);
             log.info("Scanning {} commits for {}", commits.size(), repoDisplay);
 
-            // Walk selection is newest-first; reverse it so firstSeen is evaluated in history order.
             commits.sort(Comparator.comparingInt(RevCommit::getCommitTime).thenComparing(RevCommit::getName));
             for (int index = 0; index < commits.size(); index++) {
                 RevCommit commit = commits.get(index);
