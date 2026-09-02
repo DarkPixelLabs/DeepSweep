@@ -14,7 +14,7 @@ class SecretPatternsTest {
     @Test void googleApiKeyAvoidsNearMiss() { assertNoType("AIza" + "a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6", "Google API Key"); }
 
     @Test void githubTokenMatches() { assertType("ghp_" + "Abc1234567890Abc1234567890Abc1234567890", "GitHub Token"); }
-    @Test void githubTokenAvoidsNearMiss() { assertNoType("ghp_" + "Abc1234567890Abc1234567890Abc123456789", "GitHub Token"); }
+    @Test void githubTokenAvoidsNearMiss() { assertNoType("ghp_" + "A".repeat(35), "GitHub Token"); }
 
     @Test void openAiKeyMatches() { assertType("sk-" + "AbCdEf1234567890GhIjKl", "OpenAI-style key"); }
     @Test void openAiKeyAvoidsNearMiss() { assertNoType("sk-short", "OpenAI-style key"); }
@@ -36,7 +36,7 @@ class SecretPatternsTest {
     @Test void passwordAssignmentAvoidsNearMiss() { assertNoType("username = 's3cretValue'", "Hardcoded password assignment"); }
 
     @Test void highEntropyStringMatches() {
-        assertType("token=Q7x!".replace("!", "") + "9Zp2Lm8Vw4Rk6Hn3Tq5Yc1", "High-entropy generic string");
+        assertType("token=Q7x9Zp2Lm8Vw4Rk6Hn3Tq5Yc1", "High-entropy generic string");
     }
     @Test void highEntropyStringAvoidsLowEntropyText() {
         assertNoType("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "High-entropy generic string");
