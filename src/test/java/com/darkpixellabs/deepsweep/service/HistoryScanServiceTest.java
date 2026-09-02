@@ -42,7 +42,8 @@ class HistoryScanServiceTest {
         var result = new HistoryScanService().scan(repoDir, "fixture/fixture", 3);
 
         assertEquals(3, result.commitsScanned());
-        assertEquals(1, result.findings().size());
+        assertEquals(1, result.findings().size(), () -> result.findings().stream()
+                .map(f -> f.secretType() + ":" + f.redactedPreview()).toList().toString());
         assertEquals(firstCommit, result.findings().getFirst().firstSeenCommit());
         assertEquals("secret.txt", result.findings().getFirst().filePath());
         assertFalse(result.findings().getFirst().stillInHead());
