@@ -13,7 +13,7 @@ class GitCloneServiceTest {
         Files.createDirectories(root.resolve("nested/dir"));
         Files.writeString(root.resolve("nested/dir/file.txt"), "temporary");
 
-        new GitCloneService().cleanup(root);
+        new GitCloneService(524_288_000L).cleanup(root);
 
         assertFalse(Files.exists(root));
     }
