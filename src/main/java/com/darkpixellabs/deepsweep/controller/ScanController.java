@@ -7,12 +7,12 @@ import com.darkpixellabs.deepsweep.service.HistoryScanService;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -20,6 +20,7 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "*")
 public class ScanController {
     private static final int DEFAULT_MAX_COMMITS = 500;
     private static final int MAX_COMMITS = 2000;
@@ -55,6 +56,8 @@ public class ScanController {
             clone = gitCloneService.cloneRepository(request.repoUrl().trim(), request.token());
             ScanResult result = historyScanService.scan(clone, repoDisplay, maxCommits);
             return ResponseEntity.ok(result);
+        } catch (GitCloneService.RepoTooLargeException e) {
+            return error(HttpStatus.PAYLOAD_TOO_LARGE, "Repository exceeds the configured disk-space limit");
         } catch (GitAPIException e) {
             return error(HttpStatus.BAD_GATEWAY, "Unable to clone repository");
         } catch (Exception e) {
