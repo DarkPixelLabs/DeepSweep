@@ -6,4 +6,4 @@ if [ ! -f "$WRAPPER_JAR" ]; then
   mkdir -p "$(dirname "$WRAPPER_JAR")"
   curl -fsSL "https://repo.maven.apache.org/maven2/org/apache/maven/wrapper/maven-wrapper/3.3.4/maven-wrapper-3.3.4.jar" -o "$WRAPPER_JAR"
 fi
-exec java -jar "$WRAPPER_JAR" "$@"
+exec java -classpath "$WRAPPER_JAR" org.apache.maven.wrapper.MavenWrapperMain "$@"
