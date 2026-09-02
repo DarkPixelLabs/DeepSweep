@@ -38,7 +38,10 @@ The scanner also filters to text-like source/config/document extensions and skip
 
 Java 21 is required.
 
+Set an API key before starting the application:
+
 ```bash
+export DEEPSWEEP_API_KEY="replace-with-a-long-random-value"
 ./mvnw spring-boot:run
 ```
 
@@ -50,7 +53,9 @@ If the executable bit was not preserved by your checkout, run `chmod +x mvnw` on
 
 ```bash
 docker build -t deepsweep .
-docker run -p 8080:8080 deepsweep
+docker run -p 8080:8080 \
+  -e DEEPSWEEP_API_KEY="replace-with-a-long-random-value" \
+  deepsweep
 ```
 
 The multi-stage image builds the Spring Boot JAR inside the builder image, then runs it on a Java 21 JRE image.
@@ -59,13 +64,22 @@ The multi-stage image builds the Spring Boot JAR inside the builder image, then 
 
 ### `GET /api/health`
 
+The health endpoint is intentionally unauthenticated so deployment health checks can reach it.
+
 ```json
 {"status":"ok"}
 ```
 
 ### `POST /api/scan`
 
+`POST /api/scan` requires the configured `X-API-Key` header.
+
 Request:
+
+```http
+X-API-Key: replace-with-your-api-key
+Content-Type: application/json
+```
 
 ```json
 {
@@ -77,7 +91,15 @@ Request:
 
 `token` and `maxCommits` are optional. `maxCommits` defaults to 500 and is rejected above 2,000.
 
-Response:
+The API key is configured with the `DEEPSWEEP_API_KEY` environment variable and is never committed to the repository. The default rate limit is 30 accepted scan requests per client IP per 60 seconds. It can be changed with `DEEPSWEEP_RATE_LIMIT_MAX_REQUESTS` and `DEEPSWEEP_RATE_LIMIT_WINDOW_SECONDS`.
+
+### Authentication and rate-limit errors
+
+- `401` — API key is missing or invalid.
+- `429` — the client IP has exceeded the configured scan rate limit. A `Retry-After` header is returned.
+- `503` — scan authentication has not been configured on the server; the application fails closed rather than exposing the scan endpoint.
+
+### Response
 
 ```json
 {
@@ -99,7 +121,7 @@ Response:
 }
 ```
 
-### Errors
+### Other errors
 
 Invalid repository URLs and invalid commit limits return `400`. Clone failures return `502`; a repository exceeding the configured disk limit returns `413`; unexpected scan failures return `500`.
 
@@ -107,13 +129,16 @@ Invalid repository URLs and invalid commit limits return `400`. Clone failures r
 
 DeepSweep handles real repository content server-side. The application:
 
-- never logs the `token` request field or raw matched secret values;
+- never logs the `token` request field, API key, or raw matched secret values;
 - keeps the token request-scoped and does not persist it;
+- requires an API key for `/api/scan` and rate-limits accepted scans by client IP;
 - accepts only GitHub HTTPS repository URLs to avoid arbitrary clone targets;
 - checks the cloned `.git` directory against `deepsweep.max-clone-bytes`, default 500 MiB;
 - deletes the temporary clone in a `finally` path and attempts a startup/shutdown sweep for leftover `deepsweep-*` directories;
 - limits history traversal to the requested `maxCommits` value and hard-caps it at 2,000;
-- enables CORS for `/api/scan` from any origin for MVP portability. If this service is exposed publicly at scale, restrict allowed origins and add service authentication/rate limiting.
+- enables CORS for `/api/scan` from any origin for MVP portability. If this service is exposed publicly at scale, also restrict allowed origins and use a strong API key.
+
+The in-memory rate limiter is intentionally simple for the MVP. In a multi-instance deployment, enforce a shared/provider-level rate limit as well so clients cannot bypass limits by switching instances.
 
 A full clone can temporarily consume significant disk space and network bandwidth even though the scan stops after the commit-walk limit. Run the service with sufficient temporary disk space and treat scanned repository content as untrusted input.
 
