@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DeepSweep · Git history secret scanner</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <header>
+    <p>DarkPixelLabs security tools</p>
+    <h1>DeepSweep</h1>
+    <p>Search a repository's commit history for secrets that were ever committed.</p>
+  </header>
+
+  <form id="scan-form">
+    <label>Repository URL
+      <input id="repo-url" type="url" placeholder="https://github.com/owner/repo" required>
+    </label>
+    <label>Personal access token <span>(optional)</span>
+      <input id="token" type="password" autocomplete="off" placeholder="For private repositories">
+    </label>
+    <label>Max commits
+      <input id="max-commits" type="number" min="1" max="2000" value="500">
+    </label>
+    <button id="scan-button" type="submit">Start scan</button>
+  </form>
+
+  <section id="status" aria-live="polite" hidden></section>
+  <section id="results" hidden>
+    <div class="results-heading">
+      <h2>Findings</h2>
+      <span id="summary"></span>
+    </div>
+    <div id="empty" hidden>No secrets found in the scanned history.</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>File</th><th>Type</th><th>Confidence</th><th>First seen</th><th>Date</th><th>Author</th><th>HEAD</th></tr></thead>
+        <tbody id="findings"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
