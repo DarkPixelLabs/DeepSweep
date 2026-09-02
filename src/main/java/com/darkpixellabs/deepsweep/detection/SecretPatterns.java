@@ -2,8 +2,10 @@ package com.darkpixellabs.deepsweep.detection;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,20 +46,25 @@ public final class SecretPatterns {
             return List.of();
         }
         Map<String, Detection> unique = new LinkedHashMap<>();
+        Set<String> knownSecretValues = new HashSet<>();
         for (Rule rule : NAMED_RULES) {
             Matcher matcher = rule.pattern.matcher(content);
             while (matcher.find()) {
-                add(unique, new Detection(rule.type, rule.confidence, matcher.group()));
+                String value = matcher.group();
+                knownSecretValues.add(value);
+                add(unique, new Detection(rule.type, rule.confidence, value));
             }
         }
         Matcher passwordMatcher = PASSWORD.matcher(content);
         while (passwordMatcher.find()) {
-            add(unique, new Detection("Hardcoded password assignment", "high", passwordMatcher.group(2)));
+            String value = passwordMatcher.group(2);
+            knownSecretValues.add(value);
+            add(unique, new Detection("Hardcoded password assignment", "high", value));
         }
         Matcher entropyMatcher = GENERIC_STRING.matcher(content);
         while (entropyMatcher.find()) {
             String value = entropyMatcher.group();
-            if (shannonEntropy(value) > 4.0 && !looksLikeCommonText(value)) {
+            if (!knownSecretValues.contains(value) && shannonEntropy(value) > 4.0 && !looksLikeCommonText(value)) {
                 add(unique, new Detection("High-entropy generic string", "low", value));
             }
         }
